@@ -1,0 +1,61 @@
+<!-- profile.html --><!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Profile - DavintoReads</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+  <div class="max-w-xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold text-center text-indigo-600 mb-6">Your Profile</h1>
+    <form id="profile-form" class="space-y-4">
+      <input type="text" id="profile-username" placeholder="Username" class="w-full px-4 py-2 border rounded" required />
+      <input type="email" id="profile-email" disabled class="w-full px-4 py-2 border rounded bg-gray-100" />
+      <textarea id="profile-bio" placeholder="Your bio..." rows="4" class="w-full px-4 py-2 border rounded"></textarea>
+      <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700">Update Profile</button>
+    </form>
+    <button id="logout-btn" class="mt-6 w-full bg-red-500 text-white py-2 rounded hover:bg-red-600">Log Out</button>
+  </div>  <script type="module">
+    import { auth, db } from './firebase.js';
+    import { doc, getDoc, updateDoc } from 'firebase/firestore';
+    import { onAuthStateChanged, signOut } from 'firebase/auth';
+
+    const usernameField = document.getElementById('profile-username');
+    const emailField = document.getElementById('profile-email');
+    const bioField = document.getElementById('profile-bio');
+    const profileForm = document.getElementById('profile-form');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        alert("You're not logged in.");
+        window.location.href = 'login.html';
+        return;
+      }
+
+      emailField.value = user.email;
+
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        usernameField.value = data.username || "";
+        bioField.value = data.bio || "";
+      }
+
+      profileForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await updateDoc(doc(db, "users", user.uid), {
+          username: usernameField.value,
+          bio: bioField.value
+        });
+        alert("Profile updated successfully!");
+      });
+
+      logoutBtn.addEventListener("click", async () => {
+        await signOut(auth);
+        alert("Logged out.");
+        window.location.href = 'login.html';
+      });
+    });
+  </script></body>
+</html>
