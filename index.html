@@ -5,6 +5,39 @@
   <title>DavintoReads - Read, Write & Earn</title>
   <link rel="stylesheet" href="styles.css" />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script type="module">
+    import { auth, db } from './firebase.js';
+    import { onAuthStateChanged } from 'firebase/auth';
+    import { doc, getDoc } from 'firebase/firestore';window.userInfo = null;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    document.getElementById("write").innerHTML = '<p class="text-center text-red-600">You must be logged in to write.</p>';
+    document.getElementById("community").innerHTML += '<p class="text-center text-red-600">Login required to post in the community.</p>';
+    return;
+  }
+  const userDoc = await getDoc(doc(db, "users", user.uid));
+  if (userDoc.exists()) {
+    window.userInfo = userDoc.data();
+
+    const nav = document.querySelector("nav");
+    const avatarImg = document.createElement("img");
+    avatarImg.src = userInfo.avatarUrl || 'https://via.placeholder.com/40';
+    avatarImg.className = "inline-block w-8 h-8 rounded-full ml-2 object-cover";
+    avatarImg.alt = "Avatar";
+    nav.appendChild(avatarImg);
+
+    if (userInfo.role === "writer") {
+      const dashboardLink = document.createElement("a");
+      dashboardLink.href = "dashboard.html";
+      dashboardLink.className = "hover:text-indigo-600";
+      dashboardLink.textContent = "Dashboard";
+      nav.appendChild(dashboardLink);
+    }
+  }
+});
+
+  </script>
 </head>
 <body class="bg-gray-100 text-gray-900">
   <header class="bg-white shadow-md sticky top-0 z-50">
@@ -15,7 +48,8 @@
         <a href="#explore" class="hover:text-indigo-600">Explore</a>
         <a href="#community" class="hover:text-indigo-600">Community</a>
         <a href="#write" class="hover:text-indigo-600">Write</a>
-        <a href="#login" class="hover:text-indigo-600">Login</a>
+        <a href="login.html" class="hover:text-indigo-600">Login</a>
+        <a href="profile.html" class="hover:text-indigo-600">Profile</a>
       </nav>
     </div>
   </header>  <section id="home" class="bg-indigo-600 text-white py-20 text-center">
@@ -49,5 +83,5 @@
     <div class="max-w-7xl mx-auto text-center">
       <p>© 2025 DavintoReads. Powered by Chimdindu MacDonald.</p>
     </div>
-  </footer>  <script src="script.js"></script></body>
+  </footer>  <script src="script.js" type="module"></script></body>
 </html>
