@@ -1,0 +1,69 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Writer Dashboard - DavintoReads</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-3xl font-bold mb-4 text-indigo-600">Writer Dashboard</h1>
+    <div id="stats" class="mb-6 text-gray-800">
+      <p><strong>Username:</strong> <span id="user-name"></span></p>
+      <p><strong>Email:</strong> <span id="user-email"></span></p>
+      <p><strong>Total Coins Earned:</strong> <span id="user-coins">0</span></p>
+    </div>
+    <h2 class="text-xl font-semibold mb-2">Your Novels</h2>
+    <ul id="user-novels" class="list-disc list-inside space-y-2"></ul>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './firebase.js';
+    import { onAuthStateChanged } from 'firebase/auth';
+    import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+
+    const userName = document.getElementById("user-name");
+    const userEmail = document.getElementById("user-email");
+    const userCoins = document.getElementById("user-coins");
+    const userNovels = document.getElementById("user-novels");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        alert("You must be logged in as a writer to view this page.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (!userDoc.exists() || userDoc.data().role !== "writer") {
+        alert("Access denied. Writers only.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const data = userDoc.data();
+      userName.textContent = data.username;
+      userEmail.textContent = data.email;
+      userCoins.textContent = data.coins;
+
+      // Get writer's novels from Firestore
+      const novelsRef = collection(db, "novels");
+      const q = query(novelsRef, where("authorId", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        userNovels.innerHTML = "<li>You haven't published any novels yet.</li>";
+      } else {
+        querySnapshot.forEach((doc) => {
+          const novel = doc.data();
+          const li = document.createElement("li");
+          li.textContent = novel.title;
+          userNovels.appendChild(li);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
