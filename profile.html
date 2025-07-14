@@ -21,9 +21,10 @@
     </form>
     <button id="logout-btn" class="mt-6 w-full bg-red-500 text-white py-2 rounded hover:bg-red-600">Log Out</button>
   </div>  <script type="module">
-    import { auth, db } from './firebase.js';
+    import { auth, db, storage } from './firebase.js';
     import { doc, getDoc, updateDoc } from 'firebase/firestore';
     import { onAuthStateChanged, signOut, updatePassword } from 'firebase/auth';
+    import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
     const usernameField = document.getElementById('profile-username');
     const emailField = document.getElementById('profile-email');
@@ -65,22 +66,21 @@
         };
 
         if (avatarUpload.files[0]) {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            updateData.avatarUrl = reader.result;
-            await updateDoc(doc(db, "users", currentUser.uid), updateData);
-            alert("Profile updated successfully!");
-          };
-          reader.readAsDataURL(avatarUpload.files[0]);
-        } else {
-          await updateDoc(doc(db, "users", currentUser.uid), updateData);
-          alert("Profile updated successfully!");
+          const avatarRef = ref(storage, `avatars/${currentUser.uid}`);
+          await uploadBytes(avatarRef, avatarUpload.files[0]);
+          const avatarUrl = await getDownloadURL(avatarRef);
+          updateData.avatarUrl = avatarUrl;
+          avatarPreview.src = avatarUrl;
         }
+
+        await updateDoc(doc(db, "users", currentUser.uid), updateData);
 
         if (passwordField.value.length > 5) {
           await updatePassword(currentUser, passwordField.value);
           alert("Password updated.");
         }
+
+        alert("Profile updated successfully!");
       } catch (error) {
         alert("Error: " + error.message);
       }
