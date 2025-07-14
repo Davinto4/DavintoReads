@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buy Coins - DavintoReads</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <header class="bg-white shadow sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="index.html" class="text-2xl font-bold text-indigo-600">DavintoReads</a>
+      <nav class="space-x-4">
+        <a href="index.html#explore" class="hover:text-indigo-600">Explore</a>
+        <a href="novel.html" class="hover:text-indigo-600">My Novels</a>
+        <a href="profile.html" class="hover:text-indigo-600">Profile</a>
+      </nav>
+    </div>
+  </header>  <main class="max-w-3xl mx-auto py-10 px-6 bg-white mt-6 rounded shadow">
+    <h1 class="text-3xl font-bold mb-4 text-center">💰 Buy Coins</h1>
+    <p class="text-center text-gray-600 mb-6">Use coins to unlock premium chapters.</p><div id="coin-balance" class="text-center text-lg font-semibold mb-6">Loading your balance...</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+  <button class="bg-indigo-600 text-white py-4 px-6 rounded shadow hover:bg-indigo-700" data-coins="100">Buy 100 Coins - ₦500</button>
+  <button class="bg-indigo-600 text-white py-4 px-6 rounded shadow hover:bg-indigo-700" data-coins="250">Buy 250 Coins - ₦1000</button>
+  <button class="bg-indigo-600 text-white py-4 px-6 rounded shadow hover:bg-indigo-700" data-coins="500">Buy 500 Coins - ₦2000</button>
+</div>
+
+<div class="text-center mb-10">
+  <button class="underline text-indigo-600 hover:text-indigo-800">🎥 Watch ads to earn free coins</button>
+</div>
+
+<div class="border-t pt-6">
+  <h2 class="text-xl font-bold mb-4 text-center">💵 Manual Payment Options</h2>
+  <div class="space-y-4">
+    <div class="bg-gray-50 p-4 rounded shadow">
+      <h3 class="font-semibold mb-1">Access Bank</h3>
+      <p>Account Number: <strong>1719816647</strong></p>
+      <p>Name: Chima Chimdindu Macdonald</p>
+    </div>
+    <div class="bg-gray-50 p-4 rounded shadow">
+      <h3 class="font-semibold mb-1">Opay</h3>
+      <p>Phone/Account: <strong>08169045105</strong></p>
+      <p>Name: Chima Chimdindu Macdonald</p>
+    </div>
+    <div class="bg-gray-50 p-4 rounded shadow">
+      <h3 class="font-semibold mb-1">Bitcoin</h3>
+      <p>Address: <code class="text-sm">16uj5Bq8J11q9xPBS88T8zAFGeCpRK5T9y</code></p>
+    </div>
+  </div>
+
+  <div class="mt-6 text-center">
+    <button class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">✅ I’ve Paid</button>
+    <p class="text-sm text-gray-500 mt-2">After confirming your payment, coins will be added manually to your account.</p>
+  </div>
+</div>
+
+  </main>  <script type="module">
+    import { auth, db } from './firebase.js';
+    import { onAuthStateChanged } from 'firebase/auth';
+    import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+
+    const balanceEl = document.getElementById('coin-balance');
+    const buttons = document.querySelectorAll('[data-coins]');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        balanceEl.textContent = 'Please log in to view your balance.';
+        buttons.forEach(btn => btn.disabled = true);
+        return;
+      }
+
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      let userData = userSnap.data();
+      balanceEl.textContent = `Your Balance: ${userData.coins || 0} coins`;
+
+      buttons.forEach(button => {
+        button.addEventListener('click', async () => {
+          const coins = Number(button.dataset.coins);
+          alert(`Mock payment of ₦ for ${coins} coins successful!`);
+          await updateDoc(userRef, {
+            coins: increment(coins)
+          });
+          userData.coins = (userData.coins || 0) + coins;
+          balanceEl.textContent = `Your Balance: ${userData.coins} coins`;
+        });
+      });
+    });
+  </script></body>
+</html>
