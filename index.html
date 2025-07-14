@@ -8,19 +8,57 @@
   <script type="module">
     import { auth, db } from './firebase.js';
     import { onAuthStateChanged } from 'firebase/auth';
-    import { doc, getDoc } from 'firebase/firestore';window.userInfo = null;
+    import { doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, getDocs } from 'firebase/firestore';window.userInfo = null;
+const communityPosts = document.getElementById('community-posts');
+
+const loadCommunityPosts = async () => {
+  const q = query(collection(db, "community"), orderBy("timestamp", "desc"));
+  const snapshot = await getDocs(q);
+  communityPosts.innerHTML = "";
+  snapshot.forEach(async (docSnap) => {
+    const data = docSnap.data();
+    const userDoc = await getDoc(doc(db, "users", data.uid));
+    const user = userDoc.exists() ? userDoc.data() : {};
+
+    const div = document.createElement("div");
+    div.className = "flex items-start space-x-3 bg-gray-50 p-3 rounded shadow";
+
+    const img = document.createElement("img");
+    img.src = user.avatarUrl || 'https://via.placeholder.com/40';
+    img.alt = "avatar";
+    img.className = "w-10 h-10 rounded-full object-cover";
+
+    const content = document.createElement("div");
+    const name = document.createElement("p");
+    name.className = "font-semibold text-indigo-600";
+    name.textContent = user.username || "Anonymous";
+    const text = document.createElement("p");
+    text.textContent = data.text;
+
+    content.appendChild(name);
+    content.appendChild(text);
+
+    div.appendChild(img);
+    div.appendChild(content);
+    communityPosts.appendChild(div);
+  });
+};
 
 onAuthStateChanged(auth, async (user) => {
+  const writeSec = document.getElementById("write");
+  const communitySec = document.getElementById("community");
+
   if (!user) {
-    document.getElementById("write").innerHTML = '<p class="text-center text-red-600">You must be logged in to write.</p>';
-    document.getElementById("community").innerHTML += '<p class="text-center text-red-600">Login required to post in the community.</p>';
+    writeSec.innerHTML = '<p class="text-center text-red-600">You must be logged in to write.</p>';
+    communitySec.innerHTML += '<p class="text-center text-red-600">Login required to post in the community.</p>';
     return;
   }
+
   const userDoc = await getDoc(doc(db, "users", user.uid));
   if (userDoc.exists()) {
     window.userInfo = userDoc.data();
-
     const nav = document.querySelector("nav");
+
     const avatarImg = document.createElement("img");
     avatarImg.src = userInfo.avatarUrl || 'https://via.placeholder.com/40';
     avatarImg.className = "inline-block w-8 h-8 rounded-full ml-2 object-cover";
@@ -35,6 +73,23 @@ onAuthStateChanged(auth, async (user) => {
       nav.appendChild(dashboardLink);
     }
   }
+
+  // Enable community post form
+  const form = document.getElementById("post-form");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = form.querySelector("input").value;
+    if (!text) return;
+    await addDoc(collection(db, "community"), {
+      uid: user.uid,
+      text,
+      timestamp: serverTimestamp(),
+    });
+    form.reset();
+    loadCommunityPosts();
+  });
+
+  loadCommunityPosts();
 });
 
   </script>
