@@ -1,12 +1,97 @@
-// DavintoReads: script.js
+import { auth, db, ref, set, push, onValue, get, update } from './firebase.js';
+import { onAuthStateChanged } from 'firebase/auth';
 
-document.addEventListener("DOMContentLoaded", () => { const novelForm = document.getElementById("novel-form"); const postForm = document.getElementById("post-form"); const novelsContainer = document.getElementById("novels"); const communityPosts = document.getElementById("community-posts");
+const novelsContainer = document.getElementById("novels");
+const communityContainer = document.getElementById("community-posts");
+const postForm = document.getElementById("post-form");
+const novelForm = document.getElementById("novel-form");
 
-// Dummy data for popular novels const novels = [ { title: "Rise of the Solariin", author: "Omeka Velar" }, { title: "Twilight Empire", author: "Zantria Rex" }, { title: "Chronicles of Light", author: "Nova Lune" }, { title: "Whispers of Code", author: "Dev Sage" }, ];
+// Fetch and show novels
+function loadNovels() {
+  onValue(ref(db, 'novels'), (snapshot) => {
+    novelsContainer.innerHTML = "";
+    snapshot.forEach(novelSnap => {
+      const novel = novelSnap.val();
+      const novelEl = document.createElement("div");
+      novelEl.className = "bg-white p-4 rounded shadow";
+      novelEl.innerHTML = `
+        <h3 class="font-bold text-lg">${novel.title}</h3>
+        <p class="text-sm text-gray-500">${novel.genre}</p>
+        <p>${novel.description}</p>
+        <a href="novel.html?id=${novelSnap.key}" class="text-indigo-600 hover:underline">Read More</a>
+      `;
+      novelsContainer.appendChild(novelEl);
+    });
+  });
+}
 
-novels.forEach((novel) => { const div = document.createElement("div"); div.className = "p-4 bg-white rounded shadow hover:shadow-lg"; div.innerHTML = <h3 class='font-bold text-lg'>${novel.title}</h3><p class='text-sm text-gray-600'>by ${novel.author}</p>; novelsContainer.appendChild(div); });
+// Handle posting in community
+if (postForm) {
+  postForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = postForm.querySelector("input");
+    const content = input.value.trim();
+    const user = auth.currentUser;
+    if (!user || !content) return;
+    const postRef = push(ref(db, "posts"));
+    await set(postRef, {
+      uid: user.uid,
+      content,
+      createdAt: Date.now()
+    });
+    input.value = "";
+  });
+}
 
-// Community Post Logic postForm.addEventListener("submit", (e) => { e.preventDefault(); const input = postForm.querySelector("input"); const content = input.value.trim(); if (!content) return; const p = document.createElement("p"); p.className = "bg-gray-100 px-4 py-2 rounded shadow"; p.textContent = content; communityPosts.prepend(p); input.value = ""; });
+// Load community posts
+if (communityContainer) {
+  onValue(ref(db, "posts"), (snapshot) => {
+    communityContainer.innerHTML = "";
+    snapshot.forEach(postSnap => {
+      const post = postSnap.val();
+      const div = document.createElement("div");
+      div.className = "bg-gray-100 p-2 rounded";
+      div.textContent = post.content;
+      communityContainer.appendChild(div);
+    });
+  });
+}
 
-// Novel Form Logic novelForm.addEventListener("submit", (e) => { e.preventDefault(); const [titleInput, contentInput] = novelForm.querySelectorAll("input, textarea"); const title = titleInput.value.trim(); const story = contentInput.value.trim(); if (!title || !story) return; alert(Your novel \"${title}\" has been submitted!); titleInput.value = ""; contentInput.value = ""; }); });
+// Save new novel + chapters
+if (novelForm) {
+  novelForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return alert("Login required");
+    const [titleInput, contentInput] = novelForm.querySelectorAll("input, textarea");
+    const novelRef = push(ref(db, "novels"));
+    await set(novelRef, {
+      title: titleInput.value,
+      description: contentInput.value.slice(0, 100),
+      genre: "General",
+      uid: user.uid,
+      createdAt: Date.now()
+    });
+    const chapterRef = push(ref(db, `chapters/${novelRef.key}`));
+    await set(chapterRef, {
+      title: "Chapter 1",
+      content: contentInput.value,
+      isLocked: false,
+      createdAt: Date.now()
+    });
+    alert("Novel published!");
+    titleInput.value = "";
+    contentInput.value = "";
+  });
+}
 
+// Auto login check
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    console.log("Not logged in");
+  } else {
+    console.log("Logged in:", user.email);
+  }
+});
+
+loadNovels();
