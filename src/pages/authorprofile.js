@@ -1,45 +1,62 @@
 // src/pages/AuthorProfile.js
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { getUserProfile } from "../firebase/firestore/userService";
-import { getNovelsByAuthor } from "../firebase/firestore/novelService";
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
-const AuthorProfile = () => {
-  const { authorId } = useParams();
-  const [profile, setProfile] = useState(null);
+export default function AuthorProfile() {
+  const { userId } = useParams();
+  const [author, setAuthor] = useState(null);
   const [novels, setNovels] = useState([]);
 
   useEffect(() => {
-    async function fetchData() {
-      const userData = await getUserProfile(authorId);
-      const authoredNovels = await getNovelsByAuthor(authorId);
-      setProfile(userData);
-      setNovels(authoredNovels);
-    }
-    fetchData();
-  }, [authorId]);
+    const fetchAuthor = async () => {
+      const docRef = doc(db, 'users', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setAuthor({
+          ...data,
+          avatar: data.avatar || '/default-avatar.png',
+          social: {
+            twitter: data?.social?.twitter || '',
+            website: data?.social?.website || '',
+          },
+        });
+      }
+    };
 
-  if (!profile) return <p className="text-center mt-8">Loading...</p>;
+    const fetchNovels = async () => {
+      const q = query(collection(db, 'novels'), where('authorId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      setNovels(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+
+    fetchAuthor();
+    fetchNovels();
+  }, [userId]);
+
+  if (!author) return <div className="text-center mt-6">Loading author...</div>;
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <div className="flex gap-4 items-center">
+    <div className="p-6 max-w-3xl mx-auto">
+      <div className="flex items-center gap-4">
         <img
-          src={profile.avatar || "/default-avatar.png"}
-          alt="Avatar"
+          src={author.avatar}
+          alt="Author avatar"
           className="w-24 h-24 rounded-full object-cover"
         />
         <div>
-          <h1 className="text-2xl font-bold">{profile.displayName}</h1>
-          <p className="text-gray-500">{profile.bio}</p>
-          <div className="flex space-x-4 mt-2 text-blue-600">
-            {profile.social?.twitter && (
-              <a href={profile.social.twitter} target="_blank" rel="noopener noreferrer">
+          <h1 className="text-2xl font-bold">{author.displayName}</h1>
+          <p className="text-gray-600 text-sm">{author.bio}</p>
+          <div className="flex gap-4 mt-2 text-blue-600">
+            {author.social.twitter && (
+              <a href={author.social.twitter} target="_blank" rel="noopener noreferrer">
                 Twitter
               </a>
             )}
-            {profile.social?.website && (
-              <a href={profile.social.website} target="_blank" rel="noopener noreferrer">
+            {author.social.website && (
+              <a href={author.social.website} target="_blank" rel="noopener noreferrer">
                 Website
               </a>
             )}
@@ -47,20 +64,25 @@ const AuthorProfile = () => {
         </div>
       </div>
 
-      <h2 className="mt-6 text-xl font-semibold">
-        Novels by {profile.displayName}
-      </h2>
-      <ul className="grid grid-cols-2 gap-4 mt-4">
-        {novels.map((novel) => (
-          <li key={novel.id} className="border p-3 rounded hover:shadow">
-            <a href={`/novel/${novel.id}`} className="font-bold text-blue-700">
-              {novel.title}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-3">Novels by {author.displayName}</h2>
+        {novels.length === 0 ? (
+          <p className="text-gray-500 italic">No novels published yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {novels.map(novel => (
+              <li key={novel.id}>
+                <a
+                  href={`/novel/${novel.id}`}
+                  className="text-blue-700 hover:underline font-medium"
+                >
+                  {novel.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
-};
-
-export default AuthorProfile;
+}
