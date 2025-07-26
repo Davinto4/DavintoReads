@@ -15,6 +15,9 @@ import EditProfile from './pages/EditProfile';
 import Home from "./pages/Home";
 // ...
 <Route path="/" element={<Home />} />
+import GenrePage from "./pages/GenrePage";
+// ...
+<Route path="/genres/:name" element={<GenrePage />} />
 
 const App = () => {
   return (
