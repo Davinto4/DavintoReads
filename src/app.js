@@ -12,6 +12,9 @@ import AddChapter from './pages/AddChapter';
 import Dashboard from './pages/Dashboard';
 import AuthorProfile from './pages/AuthorProfile';
 import EditProfile from './pages/EditProfile';
+import Home from "./pages/Home";
+// ...
+<Route path="/" element={<Home />} />
 
 const App = () => {
   return (
