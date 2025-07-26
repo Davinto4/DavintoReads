@@ -1,39 +1,64 @@
 // src/pages/AuthorProfile.js
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { getUserProfile } from "../firebase/firestore/userService";
+import { getNovelsByAuthor } from "../firebase/firestore/novelService";
 
 const AuthorProfile = () => {
-  const { userId } = useParams();
-  const [author, setAuthor] = useState(null);
+  const { authorId } = useParams();
+  const [profile, setProfile] = useState(null);
+  const [novels, setNovels] = useState([]);
 
   useEffect(() => {
-    const fetchAuthor = async () => {
-      const docRef = doc(db, 'users', userId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setAuthor(docSnap.data());
-      }
-    };
-    fetchAuthor();
-  }, [userId]);
+    async function fetchData() {
+      const userData = await getUserProfile(authorId);
+      const authoredNovels = await getNovelsByAuthor(authorId);
+      setProfile(userData);
+      setNovels(authoredNovels);
+    }
+    fetchData();
+  }, [authorId]);
 
-  if (!author) return <p>Loading...</p>;
+  if (!profile) return <p className="text-center mt-8">Loading...</p>;
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="flex items-center space-x-4">
-        <img src={author.avatar} alt="avatar" className="w-24 h-24 rounded-full" />
+    <div className="p-4 max-w-3xl mx-auto">
+      <div className="flex gap-4 items-center">
+        <img
+          src={profile.avatar || "/default-avatar.png"}
+          alt="Avatar"
+          className="w-24 h-24 rounded-full object-cover"
+        />
         <div>
-          <h2 className="text-2xl font-bold">{author.displayName}</h2>
-          <p className="text-sm text-gray-600">{author.bio}</p>
-          <div className="flex space-x-4 mt-2 text-blue-500">
-            {author.social?.twitter && <a href={author.social.twitter}>Twitter</a>}
-            {author.social?.website && <a href={author.social.website}>Website</a>}
+          <h1 className="text-2xl font-bold">{profile.displayName}</h1>
+          <p className="text-gray-500">{profile.bio}</p>
+          <div className="flex space-x-4 mt-2 text-blue-600">
+            {profile.social?.twitter && (
+              <a href={profile.social.twitter} target="_blank" rel="noopener noreferrer">
+                Twitter
+              </a>
+            )}
+            {profile.social?.website && (
+              <a href={profile.social.website} target="_blank" rel="noopener noreferrer">
+                Website
+              </a>
+            )}
           </div>
         </div>
       </div>
+
+      <h2 className="mt-6 text-xl font-semibold">
+        Novels by {profile.displayName}
+      </h2>
+      <ul className="grid grid-cols-2 gap-4 mt-4">
+        {novels.map((novel) => (
+          <li key={novel.id} className="border p-3 rounded hover:shadow">
+            <a href={`/novel/${novel.id}`} className="font-bold text-blue-700">
+              {novel.title}
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
